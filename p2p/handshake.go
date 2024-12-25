@@ -1,5 +1,6 @@
 package p2p
 
-type Handshaker interface {
-	ShakeHands() error
-}
+// HandshakeFunc is a function
+type HandshakeFunc func(any) error
+
+func NOPHandshakeFunc(any) error { return nil }

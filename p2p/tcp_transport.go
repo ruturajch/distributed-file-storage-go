@@ -23,24 +23,28 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+type TCPTransportOpts struct {
+	ListenAddr    string
+	HandshakeFunc HandshakeFunc
+	Decoder       Decoder
+}
 type TCPTransport struct {
-	listenAddress string
-	listener      net.Listener
-	handshaker    Handshaker
+	TCPTransportOpts
+	listener net.Listener
 
 	mu    sync.RWMutex
 	peers map[net.Addr]Peer
 }
 
-func NewTCPTransport(listenAddr string) *TCPTransport {
+func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-		listenAddress: listenAddr,
+		TCPTransportOpts: opts,
 	}
 }
 func (t *TCPTransport) ListenAndAccept() error {
 	var err error
 
-	t.listener, err = net.Listen("tcp", t.listenAddress)
+	t.listener, err = net.Listen("tcp", t.ListenAddr)
 	if err != nil {
 		return err
 	}
@@ -54,13 +58,39 @@ func (t *TCPTransport) startAcceptLoop() {
 		if err != nil {
 			fmt.Printf("TCP accept error: %s\n", err)
 		}
-
+		fmt.Printf("New incoming connection\n %+v\n", conn)
 		go t.handelConn(conn)
 	}
 }
 
-func (t *TCPTransport) handelConn(conn net.Conn) {
-	NewTCPPeer(conn, true)
+type Temp struct{}
 
-	fmt.Printf("New incoming connection\n %+v\n", conn)
+func (t *TCPTransport) handelConn(conn net.Conn) {
+	peer := NewTCPPeer(conn, true)
+
+	if err := t.HandshakeFunc(peer); err != nil {
+		fmt.Printf("Handshake error: %s\n", err)
+		conn.Close()
+		return
+	}
+	// Read Loop
+	msg := &Message{}
+	for {
+		if err := t.Decoder.Decode(conn, msg); err != nil {
+			fmt.Printf("TCP error: %sn", err)
+			continue
+		}
+		msg.From = conn.RemoteAddr()
+		fmt.Printf("Message: %+v\n", msg)
+		// msg := buf[:n]
+	}
+	// buf := make([]byte, 2000)
+	// for {
+	// 	n, err := conn.Read(buf)
+	// 	if err != nil {
+	// 		fmt.Printf("TCP read error: %s\n", err)
+	// 		break
+	// 	}
+	// 	fmt.Printf("Received: %s\n", buf[:n])
+	// }
 }
