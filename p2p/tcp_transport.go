@@ -99,8 +99,13 @@ func (t *TCPTransport) handelConn(conn net.Conn) {
 	// Read Loop
 	msg := RPC{}
 	for {
-		if err := t.Decoder.Decode(conn, &msg); err != nil {
-			fmt.Printf("TCP error: %sn", err)
+		err := t.Decoder.Decode(conn, &msg)
+
+		if err == net.ErrClosed {
+			return
+		}
+		if err != nil {
+			fmt.Printf("TCP read error: %sn", err)
 			continue
 		}
 		msg.From = conn.RemoteAddr()

@@ -7,9 +7,10 @@ import (
 	"github.com/anthdm/foreverstore/p2p"
 )
 
-func OnPeer(p2p.Peer) error {
-	fmt.Println("Failed to load peer func")
-	return nil
+func OnPeer(peer p2p.Peer) error {
+	//fmt.Println("Failed to load peer func")
+	peer.Close()
+	return nil // Returning nil to indicate success, or an error to indicate failure.
 }
 func main() {
 	tcpOpts := p2p.TCPTransportOpts{
